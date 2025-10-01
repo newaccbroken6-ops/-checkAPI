@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Status Checker</title>
+    <style>
+        :root {
+            --primary-color: #3498db;
+            --success-color: #2ecc71;
+            --error-color: #e74c3c;
+            --warning-color: #f39c12;
+            --bg-color: #f5f7fa;
+            --card-bg: #ffffff;
+            --text-color: #333333;
+            --border-radius: 8px;
+            --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background-color: var(--card-bg);
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+        }
+
+        h1 {
+            color: var(--primary-color);
+            margin-bottom: 10px;
+        }
+
+        .description {
+            color: #666;
+            margin-bottom: 20px;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        button {
+            padding: 10px 20px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            transition: background-color 0.3s;
+            font-weight: bold;
+        }
+
+        button:hover {
+            background-color: #2980b9;
+        }
+
+        #check-all {
+            background-color: var(--success-color);
+        }
+
+        #check-all:hover {
+            background-color: #27ae60;
+        }
+
+        #clear-all {
+            background-color: var(--error-color);
+        }
+
+        #clear-all:hover {
+            background-color: #c0392b;
+        }
+
+        .api-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 20px;
+        }
+
+        .api-card {
+            background-color: var(--card-bg);
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            padding: 20px;
+            transition: transform 0.3s;
+        }
+
+        .api-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .api-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .api-name {
+            font-weight: bold;
+            font-size: 1.1rem;
+            color: var(--primary-color);
+        }
+
+        .api-status {
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .status-checking {
+            background-color: var(--warning-color);
+            color: white;
+        }
+
+        .status-online {
+            background-color: var(--success-color);
+            color: white;
+        }
+
+        .status-offline {
+            background-color: var(--error-color);
+            color: white;
+        }
+
+        .api-url {
+            font-family: monospace;
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            word-break: break-all;
+            font-size: 0.9rem;
+        }
+
+        .api-response {
+            margin-top: 15px;
+            max-height: 200px;
+            overflow-y: auto;
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 0.85rem;
+            white-space: pre-wrap;
+        }
+
+        .api-actions {
+            margin-top: 15px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .api-actions button {
+            padding: 8px 15px;
+            font-size: 0.9rem;
+        }
+
+        .last-checked {
+            font-size: 0.8rem;
+            color: #666;
+            margin-top: 10px;
+        }
+
+        .summary {
+            background-color: var(--card-bg);
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            padding: 15px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .summary-stats {
+            display: flex;
+            gap: 20px;
+        }
+
+        .stat {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+
+        .stat-label {
+            font-size: 0.8rem;
+            color: #666;
+        }
+
+        .online {
+            color: var(--success-color);
+        }
+
+        .offline {
+            color: var(--error-color);
+        }
+
+        .checking {
+            color: var(--warning-color);
+        }
+
+        @media (max-width: 768px) {
+            .api-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .controls {
+                flex-direction: column;
+            }
+            
+            .summary {
+                flex-direction: column;
+                gap: 15px;
+            }
+            
+            .summary-stats {
+                width: 100%;
+                justify-content: space-around;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>API Status Checker</h1>
+            <p class="description">Monitora lo stato delle tue API in tempo reale</p>
+            <div class="controls">
+                <button id="check-all">Controlla Tutte le API</button>
+                <button id="clear-all">Pulisci Risultati</button>
+            </div>
+        </header>
+
+        <div class="summary">
+            <h2>Riepilogo</h2>
+            <div class="summary-stats">
+                <div class="stat">
+                    <span class="stat-value online" id="online-count">0</span>
+                    <span class="stat-label">Online</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-value offline" id="offline-count">0</span>
+                    <span class="stat-label">Offline</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-value checking" id="checking-count">0</span>
+                    <span class="stat-label">In Controllo</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="api-grid" id="api-container">
+            <!-- Le card delle API verranno generate dinamicamente qui -->
+        </div>
+    </div>
+
+    <script>
+        // Definizione delle API da controllare
+        const apis = [
+            {
+                id: 'clan-info',
+                name: 'Clan Info API',
+                url: 'https://get-clan-info.vercel.app/get_clan_info?clan_id=demo',
+                method: 'GET'
+            },
+            {
+                id: 'player-info',
+                name: 'Player Info API',
+                url: 'https://like2.vercel.app/player-info?uid=demo&server=demo&key=demo',
+                method: 'GET'
+            },
+            {
+                id: 'gemini-api',
+                name: 'Gemini API',
+                url: 'https://gemini-api-api-v2.vercel.app/prince/api/v1/ask?key=prince&ask=hello',
+                method: 'GET'
+            },
+            {
+                id: 'send-requests',
+                name: 'Send Requests API',
+                url: 'https://like2.vercel.app/send_requests?uid=demo&server=demo&key=demo',
+                method: 'GET'
+            },
+            {
+                id: 'player-info-2',
+                name: 'Player Info API 2',
+                url: 'https://like2.vercel.app/player-info?uid=demo&server=demo&key=demo',
+                method: 'GET'
+            },
+            {
+                id: 'like-api',
+                name: 'Like API',
+                url: 'https://like2.vercel.app/like?uid=demo&server=demo&key=demo',
+                method: 'GET'
+            },
+            {
+                id: 'check-ban',
+                name: 'Check Ban API',
+                url: 'https://checkban-vf40.onrender.com/ban?uid=demo',
+                method: 'GET'
+            }
+        ];
+
+        // Stato globale
+        let apiStatus = {};
+        let checkingCount = 0;
+
+        // Inizializza l'app
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeApp();
+            setupEventListeners();
+        });
+
+        function initializeApp() {
+            const apiContainer = document.getElementById('api-container');
+            
+            // Crea una card per ogni API
+            apis.forEach(api => {
+                const card = createApiCard(api);
+                apiContainer.appendChild(card);
+                
+                // Inizializza lo stato
+                apiStatus[api.id] = {
+                    status: 'unknown',
+                    lastChecked: null,
+                    response: null
+                };
+            });
+            
+            updateSummary();
+        }
+
+        function createApiCard(api) {
+            const card = document.createElement('div');
+            card.className = 'api-card';
+            card.id = `card-${api.id}`;
+            
+            card.innerHTML = `
+                <div class="api-header">
+                    <div class="api-name">${api.name}</div>
+                    <div class="api-status status-checking" id="status-${api.id}">In Attesa</div>
+                </div>
+                <div class="api-url">${api.url}</div>
+                <div class="api-response" id="response-${api.id}">Nessuna risposta ancora...</div>
+                <div class="api-actions">
+                    <button class="check-api" data-api="${api.id}">Controlla API</button>
+                    <button class="copy-url" data-api="${api.id}">Copia URL</button>
+                </div>
+                <div class="last-checked" id="last-checked-${api.id}">Ultimo controllo: Mai</div>
+            `;
+            
+            return card;
+        }
+
+        function setupEventListeners() {
+            // Pulsante per controllare tutte le API
+            document.getElementById('check-all').addEventListener('click', function() {
+                checkAllApis();
+            });
+            
+            // Pulsante per pulire tutti i risultati
+            document.getElementById('clear-all').addEventListener('click', function() {
+                clearAllResults();
+            });
+            
+            // Delegazione eventi per i pulsanti delle card API
+            document.getElementById('api-container').addEventListener('click', function(e) {
+                if (e.target.classList.contains('check-api')) {
+                    const apiId = e.target.getAttribute('data-api');
+                    checkApi(apiId);
+                }
+                
+                if (e.target.classList.contains('copy-url')) {
+                    const apiId = e.target.getAttribute('data-api');
+                    copyApiUrl(apiId);
+                }
+            });
+        }
+
+        async function checkApi(apiId) {
+            const api = apis.find(a => a.id === apiId);
+            if (!api) return;
+            
+            // Aggiorna lo stato a "controllando"
+            updateApiStatus(apiId, 'checking', null);
+            
+            try {
+                const response = await fetch(api.url, {
+                    method: api.method,
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const data = await response.text();
+                
+                if (response.ok) {
+                    updateApiStatus(apiId, 'online', data);
+                } else {
+                    updateApiStatus(apiId, 'offline', `Errore: ${response.status} - ${response.statusText}`);
+                }
+            } catch (error) {
+                updateApiStatus(apiId, 'offline', `Errore: ${error.message}`);
+            }
+        }
+
+        function updateApiStatus(apiId, status, response) {
+            // Aggiorna lo stato nell'oggetto globale
+            apiStatus[apiId] = {
+                status: status,
+                lastChecked: new Date(),
+                response: response
+            };
+            
+            // Aggiorna l'interfaccia utente
+            const statusElement = document.getElementById(`status-${apiId}`);
+            const responseElement = document.getElementById(`response-${apiId}`);
+            const lastCheckedElement = document.getElementById(`last-checked-${apiId}`);
+            
+            // Aggiorna lo stato
+            statusElement.textContent = getStatusText(status);
+            statusElement.className = `api-status status-${status}`;
+            
+            // Aggiorna la risposta
+            if (response) {
+                try {
+                    // Prova a formattare come JSON se possibile
+                    const jsonResponse = JSON.parse(response);
+                    responseElement.textContent = JSON.stringify(jsonResponse, null, 2);
+                } catch (e) {
+                    // Se non è JSON, mostra il testo così com'è
+                    responseElement.textContent = response;
+                }
+            } else {
+                responseElement.textContent = 'Nessuna risposta...';
+            }
+            
+            // Aggiorna l'ultimo controllo
+            const now = new Date();
+            lastCheckedElement.textContent = `Ultimo controllo: ${now.toLocaleTimeString()}`;
+            
+            // Aggiorna il riepilogo
+            updateSummary();
+        }
+
+        function getStatusText(status) {
+            const statusMap = {
+                'checking': 'Controllando',
+                'online': 'Online',
+                'offline': 'Offline',
+                'unknown': 'Sconosciuto'
+            };
+            
+            return statusMap[status] || status;
+        }
+
+        function checkAllApis() {
+            apis.forEach(api => {
+                checkApi(api.id);
+            });
+        }
+
+        function clearAllResults() {
+            apis.forEach(api => {
+                updateApiStatus(api.id, 'unknown', null);
+            });
+        }
+
+        function copyApiUrl(apiId) {
+            const api = apis.find(a => a.id === apiId);
+            if (!api) return;
+            
+            navigator.clipboard.writeText(api.url)
+                .then(() => {
+                    // Feedback visivo
+                    const button = document.querySelector(`.copy-url[data-api="${apiId}"]`);
+                    const originalText = button.textContent;
+                    button.textContent = 'Copiato!';
+                    
+                    setTimeout(() => {
+                        button.textContent = originalText;
+                    }, 2000);
+                })
+                .catch(err => {
+                    console.error('Errore nella copia: ', err);
+                });
+        }
+
+        function updateSummary() {
+            const statusCounts = {
+                online: 0,
+                offline: 0,
+                checking: 0,
+                unknown: 0
+            };
+            
+            // Conta gli stati
+            Object.values(apiStatus).forEach(status => {
+                statusCounts[status.status]++;
+            });
+            
+            // Aggiorna i contatori
+            document.getElementById('online-count').textContent = statusCounts.online;
+            document.getElementById('offline-count').textContent = statusCounts.offline;
+            document.getElementById('checking-count').textContent = statusCounts.checking;
+        }
+    </script>
+</body>
+</html>
